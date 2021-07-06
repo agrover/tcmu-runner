@@ -430,8 +430,7 @@ retry:
 		if (ret) {
 			tcmu_dev_err(dev, "Could not reopen device while taking lock. Err %d.\n",
 				     ret);
-			/* We were fenced and were not able to clear it. */
-			ret = TCMU_STS_FENCED;
+			ret = TCMU_STS_TIMEOUT;
 			goto drop_conn;
 		}
 	}
