@@ -26,9 +26,6 @@
 
 #include "ccan/list/list.h"
 
-#define TCMU_CONFIG_DIR_DEFAULT "/etc/tcmu"
-#define TCMU_CONFIG_FILE_DEFAULT TCMU_CONFIG_DIR_DEFAULT"/tcmu.conf"
-
 typedef enum {
 	TCMU_OPT_NONE = 0,
 	TCMU_OPT_INT, /* type int */
@@ -362,7 +359,7 @@ int tcmu_load_config(struct tcmu_config *cfg)
 		return -ENOMEM;
 
 	for (i = 0; i < 5; i++) {
-		if ((fd = open(TCMU_CONFIG_FILE_DEFAULT, O_RDONLY)) == -1) {
+		if ((fd = open(TCMU_CONFIG_FILE, O_RDONLY)) == -1) {
 			/* give a moment for editor to restore
 			 * the conf-file after edit and save */
 			sleep(1);
@@ -372,14 +369,14 @@ int tcmu_load_config(struct tcmu_config *cfg)
 	}
 	if (fd == -1) {
 		tcmu_err("Failed to open file '%s', %m\n",
-			  TCMU_CONFIG_FILE_DEFAULT);
+			  TCMU_CONFIG_FILE);
 		goto free_buf;
 	}
 
 	len = tcmu_read_config(fd, buf, TCMU_MAX_CFG_FILE_SIZE);
 	close(fd);
 	if (len < 0) {
-		tcmu_err("Failed to read file '%s'\n", TCMU_CONFIG_FILE_DEFAULT);
+		tcmu_err("Failed to read file '%s'\n", TCMU_CONFIG_FILE);
 		goto free_buf;
 	}
 
@@ -418,15 +415,15 @@ static void *dyn_config_start(void *arg)
 	 * To handle both the file save approaches mentioned above, it is better
 	 * we watch the directory and filter for MODIFY events.
 	 */
-	wd = inotify_add_watch(monitor, TCMU_CONFIG_DIR_DEFAULT, IN_MODIFY);
+	wd = inotify_add_watch(monitor, TCMU_CONFIG_DIR, IN_MODIFY);
 	if (wd == -1) {
 		tcmu_err("Failed to add \"%s\" to inotify %m\n",
-			 TCMU_CONFIG_DIR_DEFAULT);
+			 TCMU_CONFIG_DIR);
 		return NULL;
 	}
 
 	tcmu_dbg("Inotify is watching \"%s\", wd: %d, mask: IN_MODIFY\n",
-		 TCMU_CONFIG_DIR_DEFAULT, wd);
+		 TCMU_CONFIG_DIR, wd);
 
 	while (1) {
 		struct inotify_event *event;

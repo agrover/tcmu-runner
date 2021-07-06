@@ -14,6 +14,8 @@ option(with-rbd "build Ceph rbd handler" true)
 option(with-zbc "build zbc handler" true)
 option(with-fbo "build fbo handler" true)
 option(with-tcmalloc "link against tcmalloc" true)
+set(TCMU_CONFIG_DIR "/etc/tcmu" CACHE STRING "directory for tcmu configuration file")
+set(TCMU_CONFIG_FILE "tcmu.conf" CACHE STRING "tcmu configuration file")
 
 find_library(LIBNL_LIB nl-3)
 find_library(LIBNL_GENL_LIB nl-genl-3)
@@ -71,6 +73,10 @@ target_link_libraries(tcmu
   ${PTHREAD}
   ${TCMALLOC_LIB}
   )
+target_compile_definitions(tcmu 
+  PUBLIC TCMU_CONFIG_DIR="${TCMU_CONFIG_DIR}"
+  PUBLIC TCMU_CONFIG_FILE="${TCMU_CONFIG_DIR}/${TCMU_CONFIG_FILE}"
+  )
 install(TARGETS tcmu LIBRARY DESTINATION ${CMAKE_INSTALL_LIBDIR})
 
 # Stuff for building the static library
@@ -93,6 +99,10 @@ target_include_directories(tcmu_static
 target_link_libraries(tcmu_static
   ${GLIB_LIBRARIES}
   ${TCMALLOC_LIB}
+  )
+target_compile_definitions(tcmu_static 
+  PUBLIC TCMU_CONFIG_DIR="${TCMU_CONFIG_DIR}"
+  PUBLIC TCMU_CONFIG_FILE="${TCMU_CONFIG_DIR}/${TCMU_CONFIG_FILE}"
   )
 
 # Stuff for building the main binary
