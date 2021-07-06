@@ -7,6 +7,7 @@
  */
 
 #define _GNU_SOURCE
+#include <stdio.h>
 #include <stdint.h>
 #include <pthread.h>
 #include <unistd.h>
@@ -555,6 +556,78 @@ static bool tcmu_log_dir_check(const char *path)
 	return true;
 }
 
+#define TCMU_LOGROTATE_PATH "/etc/logrotate.d/tcmu-runner"
+
+static int tcmu_logrotate_conf_set(const char *logdir)
+{
+	char *buf = NULL, *line = NULL, *p;
+	int ret, m, len;
+	size_t n;
+	FILE *fp;
+
+	fp = fopen(TCMU_LOGROTATE_PATH, "r+");
+	if (fp == NULL) {
+		ret = -errno;
+		tcmu_err("Failed to open file '%s', %m\n", TCMU_LOGROTATE_PATH);
+		return ret;
+	}
+
+	ret = fseek(fp, 0L, SEEK_END);
+	if (ret == -1) {
+		ret = -errno;
+		tcmu_err("Failed to seek file '%s', %m\n", TCMU_LOGROTATE_PATH);
+		goto error;
+	}
+
+	len = ftell(fp);
+	if (len == -1) {
+		ret = -errno;
+		tcmu_err("Failed to get the length of file '%s', %m\n", TCMU_LOGROTATE_PATH);
+		goto error;
+	}
+
+	/* to make sure we have enough size */
+	len += strlen(logdir) + 1;
+	buf = calloc(len, sizeof(char));
+	if (!buf) {
+		ret = -ENOMEM;
+		goto error;
+	}
+
+	p = buf;
+	fseek(fp, 0L, SEEK_SET);
+	while ((m = getline(&line, &n, fp)) != -1) {
+		if (strstr(line, "tcmu-runner*.log") && strchr(line, '{'))
+			m = sprintf(p, "%s/tcmu-runner*.log {\n", logdir);
+		else
+			m = sprintf(p, "%s", line);
+		if (m < 0) {
+			ret = m;
+			goto error;
+		}
+
+		p += m;
+	}
+	*p = '\0';
+	len = p - buf;
+
+	fseek(fp, 0L, SEEK_SET);
+	truncate(TCMU_LOGROTATE_PATH, 0L);
+	ret = fwrite(buf, 1, len, fp);
+	if (ret != len) {
+		tcmu_err("Failed to update '%s', %m\n", TCMU_LOGROTATE_PATH);
+		goto error;
+	}
+
+	ret = 0;
+error:
+	if (fp)
+		fclose(fp);
+	free(buf);
+	free(line);
+	return ret;
+}
+
 static int tcmu_log_dir_set(const char *log_dir)
 {
 	char *new_dir;
@@ -567,7 +640,8 @@ static int tcmu_log_dir_set(const char *log_dir)
 
 	tcmu_log_dir_free();
 	tcmu_log_dir = new_dir;
-	return 0;
+
+	return tcmu_logrotate_conf_set(tcmu_log_dir);
 }
 
 static int tcmu_mkdir(const char *path)
