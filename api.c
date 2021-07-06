@@ -266,15 +266,18 @@ size_t tcmu_memcpy_into_iovec(
 	size_t copied = 0;
 
 	while (len && iov_cnt) {
-		size_t to_copy = min(iovec->iov_len, len);
+		void *iov_base = iovec->iov_base;
+		size_t iov_len = iovec->iov_len;
+		size_t to_copy = min(iov_len, len);
 
-		if (to_copy) {
-			memcpy(iovec->iov_base, src + copied, to_copy);
+		while (to_copy) {
+			memcpy(iov_base, src + copied, to_copy);
 
 			len -= to_copy;
 			copied += to_copy;
-			iovec->iov_base += to_copy;
-			iovec->iov_len -= to_copy;
+			iov_base += to_copy;
+			iov_len -= to_copy;
+			to_copy = min(iov_len, len);
 		}
 
 		iovec++;
@@ -296,15 +299,18 @@ size_t tcmu_memcpy_from_iovec(
 	size_t copied = 0;
 
 	while (len && iov_cnt) {
-		size_t to_copy = min(iovec->iov_len, len);
+		void *iov_base = iovec->iov_base;
+		size_t iov_len = iovec->iov_len;
+		size_t to_copy = min(iov_len, len);
 
-		if (to_copy) {
+		while (to_copy) {
 			memcpy(dest + copied, iovec->iov_base, to_copy);
 
 			len -= to_copy;
 			copied += to_copy;
-			iovec->iov_base += to_copy;
-			iovec->iov_len -= to_copy;
+			iov_base += to_copy;
+			iov_len -= to_copy;
+			to_copy = min(iov_len, len);
 		}
 
 		iovec++;
