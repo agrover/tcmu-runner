@@ -1,0 +1,8 @@
+sudo: required
+
+service:
+- docker
+
+script:
+- docker build -f ./extra/docker/Dockerfile.fedora29 .
+- docker build -f ./extra/docker/Dockerfile.centos7 .

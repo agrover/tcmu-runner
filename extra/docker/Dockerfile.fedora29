@@ -1,0 +1,41 @@
+# Dockerfile for testing the build of tcmu-runner based on Fedora 29
+
+FROM fedora:29
+
+ENV BUILDDIR=/build
+RUN mkdir -p $BUILDDIR
+WORKDIR $BUILDDIR
+
+COPY . $BUILDDIR
+
+# prepare the system
+RUN true \
+ && dnf -y update && dnf clean all \
+ && true
+RUN true \
+ && dnf -y install \
+           git cmake make gcc libnl3 glib2 zlib kmod \
+           libnl3-devel glib2-devel zlib-devel kmod-devel \
+ && true
+
+# glusterfs stuff
+RUN true \
+ && dnf -y install \
+           glusterfs-api glusterfs-api-devel \
+ && true
+
+# ceph stuff
+RUN true \
+ && dnf -y install \
+           librados2 librados2-devel librbd1 librbd1-devel \
+ && true
+
+# build
+RUN true \
+ && cmake . \
+ && make \
+ && make check \
+ && make install \
+ && make clean \
+ && true
+
