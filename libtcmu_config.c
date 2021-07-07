@@ -195,7 +195,7 @@ static void tcmu_conf_set_options(struct tcmu_config *cfg)
 }
 
 #define TCMU_MAX_CFG_FILE_SIZE (2 * 1024 * 1024)
-static int tcmu_read_config(int fd, char *buf, int count)
+static int tcmu_read_config(int fd, char *buf, int count, int *err)
 {
 	ssize_t len;
 	int save = errno;
@@ -204,6 +204,7 @@ static int tcmu_read_config(int fd, char *buf, int count)
 		len = read(fd, buf, count);
 	} while (len < 0 && errno == EAGAIN);
 
+	*err = -errno;
 	errno = save;
 	return len;
 }
@@ -355,12 +356,14 @@ int tcmu_load_config(struct tcmu_config *cfg)
 	int ret = -1;
 	int fd, len;
 	char *buf;
-	int i;
+	int i, count = 0;
 
 	buf = malloc(TCMU_MAX_CFG_FILE_SIZE);
 	if (!buf)
 		return -ENOMEM;
 
+retry:
+    count++;
 	for (i = 0; i < 5; i++) {
 		if ((fd = open(TCMU_CONFIG_FILE_DEFAULT, O_RDONLY)) == -1) {
 			/* give a moment for editor to restore
@@ -376,8 +379,27 @@ int tcmu_load_config(struct tcmu_config *cfg)
 		goto free_buf;
 	}
 
-	len = tcmu_read_config(fd, buf, TCMU_MAX_CFG_FILE_SIZE);
+	len = tcmu_read_config(fd, buf, TCMU_MAX_CFG_FILE_SIZE, &ret);
 	close(fd);
+
+	/*
+	 * In-case if the editor (vim) follows write to a new file (.swp, .tmp ..)
+	 * and move it to actual file name later. There is a window, where we will
+	 * encounter one case that the file data is not flushed to the disk, so in
+	 * another process(here) when reading it will be empty.
+	 *
+	 * And at the same time the old file maybe deleted, then the read will failed
+	 * with errno == ENOENT.
+	 *
+	 * Let just wait and try again.
+	 */
+	if (count <= 5 && (len == 0 || ret == -ENOENT)) {
+		tcmu_dbg("failed to read the config from file, retrying (%d/5) times\n",
+                 count);
+		sleep(1);
+		goto retry;
+	}
+
 	if (len < 0) {
 		tcmu_err("Failed to read file '%s'\n", TCMU_CONFIG_FILE_DEFAULT);
 		goto free_buf;
