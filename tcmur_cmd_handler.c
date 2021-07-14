@@ -737,7 +737,7 @@ static int handle_writesame(struct tcmu_device *dev, struct tcmulib_cmd *cmd)
 	uint32_t block_size = tcmu_dev_get_block_size(dev);
 	uint64_t start_lba = tcmu_cdb_get_lba(cdb);
 	uint64_t write_lbas;
-	size_t max_xfer_length, length = 1024 * 1024;
+	uint64_t max_xfer_length, length = 1024 * 1024;
 	struct write_same *write_same;
 	int i, ret;
 
@@ -1981,7 +1981,7 @@ free_state:
 static int handle_format_unit(struct tcmu_device *dev, struct tcmulib_cmd *cmd) {
 	struct tcmur_device *rdev = tcmu_dev_get_private(dev);
 	struct tcmur_cmd *tcmur_cmd = cmd->hm_private;
-	size_t max_xfer_length, length = 1024 * 1024;
+	uint64_t max_xfer_length, length = 1024 * 1024;
 	uint32_t block_size = tcmu_dev_get_block_size(dev);
 	uint64_t num_lbas = tcmu_dev_get_num_lbas(dev);
 	int ret;
