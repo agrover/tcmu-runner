@@ -768,7 +768,7 @@ static int handle_writesame(struct tcmu_device *dev, struct tcmulib_cmd *cmd)
 
 	max_xfer_length = tcmu_dev_get_max_xfer_len(dev) * block_size;
 	length = round_up(length, max_xfer_length);
-	length = min(length, tcmu_lba_to_byte(dev, lba_cnt));
+	length = min(length, (size_t)tcmu_lba_to_byte(dev, lba_cnt));
 
 	if (tcmur_cmd_state_init(tcmur_cmd, sizeof(*write_same), length)) {
 		tcmu_dev_err(dev, "Failed to calloc write_same data!\n");
