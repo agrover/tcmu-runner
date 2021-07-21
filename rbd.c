@@ -759,6 +759,10 @@ static int tcmu_rbd_get_lock_tag(struct tcmu_device *dev, uint16_t *tag)
 	size_t buf_len = TCMU_RBD_LOCKER_BUF_LEN;
 	int ret;
 
+	/* Not owner,force tcmu to report standby */
+	if (tcmu_rbd_has_lock(dev) != 1)
+		return TCMU_STS_NO_LOCK_HOLDERS;
+
 	memset(buf, 0, buf_len);
 
 	ret = rbd_metadata_get(state->image, TCMU_RBD_LOCKER_TAG_KEY,
